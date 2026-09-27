@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fdf3f4;
+  --foreground: #4a3b3e;
+
+  /* Palet warna LMS Sekolah, diambil langsung dari desain Figma */
+  --color-lms-bg: #fdf3f4; /* latar utama, pink pucat */
+  --color-lms-primary: #d98ba4; /* pink utama (header, aksen, tombol) */
+  --color-lms-primary-soft: rgba(217, 139, 164, 0.39); /* strip nav di bawah header */
+  --color-lms-primary-badge: rgba(217, 139, 164, 0.42); /* badge status */
+  --color-lms-dark: #4a3b3e; /* teks judul & tombol gelap */
+  --color-lms-muted: #8c7377; /* teks deskripsi/subteks */
+  --color-lms-label: #c97b93; /* label header tabel & link aktif */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-quicksand);
+
+  --color-lms-bg: var(--color-lms-bg);
+  --color-lms-primary: var(--color-lms-primary);
+  --color-lms-primary-soft: var(--color-lms-primary-soft);
+  --color-lms-primary-badge: var(--color-lms-primary-badge);
+  --color-lms-dark: var(--color-lms-dark);
+  --color-lms-muted: var(--color-lms-muted);
+  --color-lms-label: var(--color-lms-label);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-quicksand), sans-serif;
+}

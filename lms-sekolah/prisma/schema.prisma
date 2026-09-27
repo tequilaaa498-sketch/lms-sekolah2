@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  GURU
+  SISWA
+  KEPSEK
+  KURIKULUM
+}
+
+enum TipeMateri {
+  PDF
+  LINK
+}
+
+enum TipeAssessmen {
+  KUIS
+  UJIAN
+}
+
+enum StatusPenilaianAssessmen {
+  PERLU_DINILAI
+  SELESAI_DINILAI
+}
+
+enum StatusTugas {
+  BERJALAN
+  SELESAI
+}
+
+enum StatusPengumpulan {
+  BELUM_KUMPUL
+  SUDAH_KUMPUL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  namaLengkap  String
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relasi khusus role guru
+  guruMataPelajaran GuruMataPelajaran[]
+  materiDiunggah    Materi[]
+  tugasDibuat       Tugas[]
+  assessmenDibuat   Assessmen[]
+
+  // Relasi khusus role siswa
+  siswaProfile Siswa?
+
+  @@map("users")
+}
+
+model Kelas {
+  id        String   @id @default(cuid())
+  nama      String   @unique // contoh: "XII PPLG 1"
+  jurusan   String?
+  createdAt DateTime @default(now())
+
+  siswa            Siswa[]
+  guruMataPelajaran GuruMataPelajaran[]
+  materi           Materi[]
+  tugas            Tugas[]
+  assessmen        Assessmen[]
+
+  @@map("kelas")
+}
+
+model Siswa {
+  id         String   @id @default(cuid())
+  nisn       String   @unique
+  namaLengkap String
+  kehadiranPersen Float  @default(0)
+  kelasId    String
+  userId     String?  @unique
+  createdAt  DateTime @default(now())
+
+  kelas Kelas @relation(fields: [kelasId], references: [id])
+  user  User? @relation(fields: [userId], references: [id])
+
+  pengumpulanTugas   PengumpulanTugas[]
+  hasilAssessmen     HasilAssessmen[]
+  nilai              Nilai[]
+
+  @@map("siswa")
+}
+
+model MataPelajaran {
+  id        String   @id @default(cuid())
+  nama      String   @unique // contoh: "Bahasa Indonesia"
+  createdAt DateTime @default(now())
+
+  guruMataPelajaran GuruMataPelajaran[]
+  materi            Materi[]
+  tugas             Tugas[]
+  assessmen         Assessmen[]
+  nilai             Nilai[]
+
+  @@map("mata_pelajaran")
+}
+
+// Penugasan guru ke kelas + mapel tertentu ("kelas yang diampu")
+model GuruMataPelajaran {
+  id              String   @id @default(cuid())
+  guruId          String
+  kelasId         String
+  mataPelajaranId String
+  createdAt       DateTime @default(now())
+
+  guru          User          @relation(fields: [guruId], references: [id])
+  kelas         Kelas         @relation(fields: [kelasId], references: [id])
+  mataPelajaran MataPelajaran @relation(fields: [mataPelajaranId], references: [id])
+
+  @@unique([guruId, kelasId, mataPelajaranId])
+  @@map("guru_mata_pelajaran")
+}
+
+model Materi {
+  id              String     @id @default(cuid())
+  judul           String
+  tipe            TipeMateri
+  isi             String     @db.Text // path file PDF atau URL link
+  guruId          String
+  kelasId         String
+  mataPelajaranId String
+  createdAt       DateTime   @default(now())
+
+  guru          User          @relation(fields: [guruId], references: [id])
+  kelas         Kelas         @relation(fields: [kelasId], references: [id])
+  mataPelajaran MataPelajaran @relation(fields: [mataPelajaranId], references: [id])
+
+  @@map("materi")
+}
+
+model Tugas {
+  id            String      @id @default(cuid())
+  judul         String
+  deskripsi     String?     @db.Text
+  batasKumpul   DateTime
+  status        StatusTugas @default(BERJALAN)
+  guruId        String
+  kelasId       String
+  mataPelajaranId String
+  createdAt     DateTime    @default(now())
+
+  guru          User            @relation(fields: [guruId], references: [id])
+  kelas         Kelas           @relation(fields: [kelasId], references: [id])
+  mataPelajaran MataPelajaran   @relation(fields: [mataPelajaranId], references: [id])
+  pengumpulan   PengumpulanTugas[]
+
+  @@map("tugas")
+}
+
+model PengumpulanTugas {
+  id           String            @id @default(cuid())
+  tugasId      String
+  siswaId      String
+  status       StatusPengumpulan @default(BELUM_KUMPUL)
+  formatKumpul String? // "PDF", "PDF + Link", dst
+  fileUrl      String?           @db.Text
+  waktuKumpul  DateTime?
+  nilai        Float?
+  createdAt    DateTime          @default(now())
+
+  tugas Tugas @relation(fields: [tugasId], references: [id])
+  siswa Siswa @relation(fields: [siswaId], references: [id])
+
+  @@unique([tugasId, siswaId])
+  @@map("pengumpulan_tugas")
+}
+
+model Assessmen {
+  id              String                   @id @default(cuid())
+  judul           String
+  tipe            TipeAssessmen
+  guruId          String
+  kelasId         String
+  mataPelajaranId String
+  statusPenilaian StatusPenilaianAssessmen @default(PERLU_DINILAI)
+  createdAt       DateTime                 @default(now())
+
+  guru          User          @relation(fields: [guruId], references: [id])
+  kelas         Kelas         @relation(fields: [kelasId], references: [id])
+  mataPelajaran MataPelajaran @relation(fields: [mataPelajaranId], references: [id])
+  hasil         HasilAssessmen[]
+
+  @@map("assessmen")
+}
+
+model HasilAssessmen {
+  id          String    @id @default(cuid())
+  assessmenId String
+  siswaId     String
+  sudahKerjakan Boolean @default(false)
+  nilai       Float?
+  createdAt   DateTime  @default(now())
+
+  assessmen Assessmen @relation(fields: [assessmenId], references: [id])
+  siswa     Siswa     @relation(fields: [siswaId], references: [id])
+
+  @@unique([assessmenId, siswaId])
+  @@map("hasil_assessmen")
+}
+
+// Rekap nilai akhir per siswa per mapel (hasil "Generate nilai")
+model Nilai {
+  id              String   @id @default(cuid())
+  siswaId         String
+  mataPelajaranId String
+  nilaiKuis       Float?
+  nilaiUjian      Float?
+  nilaiTugas      Float?
+  rataRata        Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  siswa         Siswa         @relation(fields: [siswaId], references: [id])
+  mataPelajaran MataPelajaran @relation(fields: [mataPelajaranId], references: [id])
+
+  @@unique([siswaId, mataPelajaranId])
+  @@map("nilai")
+}
